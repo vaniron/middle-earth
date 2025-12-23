@@ -22,6 +22,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.ShieldItem;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.entry.RegistryEntryList;
@@ -105,9 +106,10 @@ public abstract class PlayerEntityMixin extends LivingEntity {
 
     @Inject(method = "getEquippedStack", at = @At("HEAD"), cancellable = true)
     public void getEquippedStack(EquipmentSlot slot, CallbackInfoReturnable<ItemStack> cir) {
-        if(isCalledFrom("net.minecraft.server.network.ServerPlayNetworkHandler", "onPlayerAction")) {
-            return;
-        }
+        // if(isCalledFrom("net.minecraft.server.network.ServerPlayNetworkHandler", "onPlayerAction")) {
+        //    return;
+        // }
+
         boolean twoHanded = false;
         ItemStack stackMainHand = this.getInventory().getMainHandStack();
         ItemStack stackOffHand = this.getInventory().getStack(PlayerInventory.OFF_HAND_SLOT);
@@ -137,7 +139,9 @@ public abstract class PlayerEntityMixin extends LivingEntity {
 
     @Inject(method = "tick", at = @At("HEAD"))
     public void tick(CallbackInfo ci) {
-        PlayerMovementData.addAFKTime((IEntityDataSaver) this,1);
+        if (this.age % 20 == 0) {  // Every second (20 ticks)
+            PlayerMovementData.addAFKTime((IEntityDataSaver) this, 1);
+        }
     }
 
     @Inject(method = "travel", at = @At("HEAD"))

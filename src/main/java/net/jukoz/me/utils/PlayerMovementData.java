@@ -8,24 +8,21 @@ public class PlayerMovementData {
 
     public static int addAFKTime(IEntityDataSaver player, int amount) {
         NbtCompound nbt = player.getPersistentData();
-        int movement = nbt.getInt(KEY);
+        int current = nbt.getInt(KEY);
+        int newValue = Math.max(0, Math.min(MAX_AFK_TIME, current + amount));
 
-        movement = Math.min(MAX_AFK_TIME, movement + amount);
-        movement = Math.max(0, movement);
+        if (newValue != current) {  // ← **KEY FIX: Only write if changed**
+            nbt.putInt(KEY, newValue);
+        }
 
-        nbt.putInt(KEY, movement);
-        return movement;
+        return newValue;
     }
 
     public static int readAFK(IEntityDataSaver player) {
-        NbtCompound nbt = player.getPersistentData();
-        int movement = nbt.getInt(KEY);
-
-        return movement;
+        return player.getPersistentData().getInt(KEY);
     }
 
-    public static void resetAFK(IEntityDataSaver player){
-        NbtCompound nbt = player.getPersistentData();
-        nbt.putInt(KEY, 0);
+    public static void resetAFK(IEntityDataSaver player) {
+        player.getPersistentData().putInt(KEY, 0);  // Always changes from non-zero
     }
 }

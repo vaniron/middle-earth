@@ -76,7 +76,7 @@ public class IsengardOrcEntity extends OrcNpcEntity {
     protected void initGoals() {
         super.initGoals();
         int index = 4;
-        initNeutralTargetSelector(index);
+        initEvilTargetSelector(index);
     }
     @Override
     protected void applyDamage(DamageSource source, float amount) {

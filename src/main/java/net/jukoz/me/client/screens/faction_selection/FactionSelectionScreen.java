@@ -57,6 +57,8 @@ public class FactionSelectionScreen extends Screen {
     public TextBlockWidget raceListTextBlockWidget;
     public TextBlockWidget factionDescriptionTextBlockWidget;
 
+    private boolean showSubfactionWarning = false;
+
     // Map buttons
     public ButtonWidget mapZoomInButton;
     public ButtonWidget mapZoomOutButton;
@@ -145,10 +147,12 @@ public class FactionSelectionScreen extends Screen {
                 button -> {
                     controller.subfactionUpdate(false);
                     updateEquipment();
+                    showSubfactionWarning = false; // Clear warning on interaction
                 },
                 button -> {
                     controller.subfactionUpdate(true);
                     updateEquipment();
+                    showSubfactionWarning = false;
                 },
                 null,
                 CycledSelectionButtonType.NORMAL);
@@ -275,9 +279,20 @@ public class FactionSelectionScreen extends Screen {
 
     @Override
     public void tick() {
-        if(controller != null)
-            controller.reduceDelay(1f / 20);
+        if (controller != null) {
+            controller.reduceDelay(1f / 20f);
+            // Update confirm button based on new rules
+            if (spawnSelectionConfirmButton != null) {
+                spawnSelectionConfirmButton.active = controller.canConfirm();
+            }
+        }
         super.tick();
+    }
+
+    public void updateConfirmButton() {
+        if (spawnSelectionConfirmButton != null) {
+            spawnSelectionConfirmButton.active = controller.canConfirm();
+        }
     }
 
     @Override
@@ -332,13 +347,17 @@ public class FactionSelectionScreen extends Screen {
         int textStartY = startY + (MINIMAL_MARGIN * 2);
         int centerWithBanner = ((startX + (MINIMAL_MARGIN / 2)) + ((mainPanelWidth - 50) / 2));
 
-        Text factionName =  controller.getCurrentFaction().tryGetShortName().formatted(Formatting.BOLD).formatted(Formatting.DARK_GRAY);
+        Faction mainFaction = controller.getCurrentFaction();
+
+        Text factionName = (mainFaction != null)
+                ? mainFaction.tryGetShortName().formatted(Formatting.BOLD, Formatting.DARK_GRAY)
+                : Text.literal("No Faction").formatted(Formatting.GRAY);
         int factionNameStartX = centerWithBanner - (textRenderer.getWidth(factionName) / 2);
         context.drawText(textRenderer, factionName,
                 factionNameStartX,
                 textStartY, 0, false);
-        if(isMouseOver(factionNameStartX, textRenderer.getWidth(factionName), textStartY, textRenderer.fontHeight)){
-            context.drawTooltip(textRenderer, List.of(controller.getCurrentFaction().getFullName()), ModWidget.getMouseX(), ModWidget.getMouseY());
+        if (mainFaction != null && isMouseOver(factionNameStartX, textRenderer.getWidth(factionName), textStartY, textRenderer.fontHeight)) {
+            context.drawTooltip(textRenderer, List.of(mainFaction.getFullName()), ModWidget.getMouseX(), ModWidget.getMouseY());
         }
 
 
@@ -453,8 +472,16 @@ public class FactionSelectionScreen extends Screen {
 
             // Subfaction
             subfactionSelectionWidget.enableArrows(controller.haveSubfaction() && (faction.getSubFactions() != null && faction.getSubFactions().size() > 1));
-            if(controller.haveSubfaction())
-                subfactionSelectionWidget.drawAnchored(context, endX, newStartY, false, (subFaction == null) ? null : subFaction.tryGetShortName(), textRenderer);
+            if (controller.haveSubfaction()) {
+                subfactionSelectionWidget.drawAnchored(
+                        context,
+                        endX,
+                        newStartY,
+                        false,
+                        controller.getCurrentSubfaction().tryGetShortName(),
+                        textRenderer
+                );
+            }
         }
 
         if(!factionRandomizerButton.active)

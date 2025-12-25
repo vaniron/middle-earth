@@ -7878,6 +7878,12 @@
   "screen.me.information.races": "Race",
   "screen.me.information.races.many": "Races",
   "screen.me.information.description": "Description",
+  "screen.me.error.no_faction": "No faction selected!",
+  "screen.me.error.no_subfaction": "Please select a subfaction!",
+  "screen.me.error.no_spawn": "No spawn point available!",
+  "screen.me.subfaction.none": "— None —",
+  "screen.me.race.none": "None",
+  "screen.me.warning.select_subfaction": "Please select a subfaction",
 
 "#Comment": "Widget UI Map Marker",
   "widget.me.spawn_tooltip_title": "Spawns",

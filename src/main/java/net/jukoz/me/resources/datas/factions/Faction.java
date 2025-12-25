@@ -310,8 +310,8 @@ public class Faction {
         return bannerData.getBannerItem(world, Text.translatable("block.me.faction_banner", getFullName()).formatted(Formatting.GOLD));
     }
 
-    public List<Identifier> getSubFactions(){
-        return subFactions;
+    public List<Identifier> getSubFactions() {
+        return subFactions != null ? subFactions : Collections.emptyList();
     }
 
     public Faction getSubfaction(World world, int index){

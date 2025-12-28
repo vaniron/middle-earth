@@ -114,13 +114,13 @@ public class AttributeData {
         put(Identifier.of("minecraft:generic.explosion_knockback_resistance"), 0.0);
         put(Identifier.of("minecraft:generic.fall_damage_multiplier"), 1.0);
         put(Identifier.of("minecraft:generic.gravity"), 0.08);
-        put(Identifier.of("minecraft:generic.jump_strength"), 0.41999998688697815);
+        put(Identifier.of("minecraft:generic.jump_strength"), 0.42);
         put(Identifier.of("minecraft:generic.knockback_resistance"), 0.0);
         put(Identifier.of("minecraft:generic.luck"), 0.0);
         put(Identifier.of("minecraft:generic.max_absorption"), 0.0);
         put(Identifier.of("minecraft:generic.max_health"), 20.0);
         put(Identifier.of("minecraft:generic.movement_efficiency"), 0.0);
-        put(Identifier.of("minecraft:generic.movement_speed"), 0.10000000149011612);
+        put(Identifier.of("minecraft:generic.movement_speed"), 0.1);
         put(Identifier.of("minecraft:generic.oxygen_bonus"), 0.0);
         put(Identifier.of("minecraft:generic.oxygen_bonus"), 0.0);
         put(Identifier.of("minecraft:generic.safe_fall_distance"), 3.0);

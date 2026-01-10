@@ -6,12 +6,14 @@ import net.jukoz.me.gui.artisantable.ArtisanTableScreenHandler;
 import net.jukoz.me.resources.StateSaverAndLoader;
 import net.jukoz.me.resources.datas.Disposition;
 import net.minecraft.block.*;
+import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.EnumProperty;
@@ -35,9 +37,9 @@ public class ArtisanTable extends HorizontalFacingBlock {
     public static final EnumProperty<ArtisanTablePart> PART = EnumProperty.of("part", ArtisanTablePart.class);
     private static final Text TITLE = Text.translatable("container.me.artisan_table");
 
-
     public ArtisanTable(Settings settings) {
-        super(settings);
+        // FIX 1: Set PistonBehavior in the constructor settings instead of overriding the method
+        super(settings.pistonBehavior(PistonBehavior.DESTROY));
         this.setDefaultState(this.stateManager.getDefaultState().with(PART, ArtisanTablePart.LEFT).with(FACING, Direction.NORTH));
     }
 
@@ -45,6 +47,8 @@ public class ArtisanTable extends HorizontalFacingBlock {
     protected MapCodec<? extends HorizontalFacingBlock> getCodec() {
         return createCodec(ArtisanTable::new);
     }
+
+    // REMOVED: getPistonBehavior override (it does not exist in superclass in 1.21+)
 
     @Override
     protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
@@ -56,7 +60,6 @@ public class ArtisanTable extends HorizontalFacingBlock {
                     if (disposition == null){
                         disposition = Disposition.NEUTRAL;
                     }
-
                     return disposition + "/" + player.isCreative();
                 }
 
@@ -72,43 +75,47 @@ public class ArtisanTable extends HorizontalFacingBlock {
                     if (disposition == null){
                         disposition = Disposition.NEUTRAL;
                     }
-                    return new ArtisanTableScreenHandler(syncId, playerInventory, disposition + "/" + player.isCreative());
+                    // FIX 3: Pass ScreenHandlerContext to fix duplication/desync issues
+                    return new ArtisanTableScreenHandler(
+                            syncId,
+                            playerInventory,
+                            ScreenHandlerContext.create(world, pos),
+                            disposition + "/" + player.isCreative()
+                    );
                 }
             });
         }
-
         return ActionResult.SUCCESS;
     }
 
+    @Override
     public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
-        if (direction == getDirectionTowardsOtherPart((ArtisanTablePart)state.get(PART), (Direction)state.get(FACING).rotateYClockwise())) {
-            return neighborState.isOf(this) && neighborState.get(PART) != state.get(PART) ? (BlockState)state : Blocks.AIR.getDefaultState();
+        if (direction == getDirectionTowardsOtherPart(state.get(PART), state.get(FACING))) {
+            return neighborState.isOf(this) && neighborState.get(PART) != state.get(PART) ? state : Blocks.AIR.getDefaultState();
         } else {
             return super.getStateForNeighborUpdate(state, direction, neighborState, world, pos, neighborPos);
         }
     }
 
-
+    // FIX 2: Robust breaking logic to prevent ghost blocks/half-tables
     @Override
     public BlockState onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
-        ArtisanTablePart tablePart = (ArtisanTablePart)state.get(PART);
-        ArtisanTablePart tablePartOpposite = (ArtisanTablePart)state.get(PART).getOpposite(state.get(PART));
+        if (!world.isClient) {
+            ArtisanTablePart part = state.get(PART);
+            BlockPos otherPos = pos.offset(getDirectionTowardsOtherPart(part, state.get(FACING)));
+            BlockState otherState = world.getBlockState(otherPos);
 
-        if (!world.isClient && (player.isCreative() || !player.canHarvest(state))) {
-            if (tablePart == ArtisanTablePart.RIGHT) {
-                BlockPos blockPos = pos.offset(state.get(FACING).rotateYCounterclockwise());
-                BlockState blockState = world.getBlockState(blockPos);
-                if (blockState.isOf(state.getBlock()) && blockState.get(PART) == ArtisanTablePart.LEFT) {
-                    world.breakBlock(blockPos, false);
-                    world.syncWorldEvent(player, 2001, blockPos, Block.getRawIdFromState(blockState));
-                }
+            if (otherState.isOf(this) && otherState.get(PART) != part) {
+                // Break the other half without dropping items (SKIP_DROPS)
+                world.setBlockState(otherPos, Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL | Block.SKIP_DROPS);
+                world.syncWorldEvent(player, 2001, otherPos, Block.getRawIdFromState(otherState));
             }
         }
         return super.onBreak(world, pos, state, player);
     }
 
     private static Direction getDirectionTowardsOtherPart(ArtisanTablePart part, Direction direction) {
-        return part == ArtisanTablePart.LEFT ? direction : direction.getOpposite();
+        return part == ArtisanTablePart.LEFT ? direction.rotateYClockwise() : direction.rotateYCounterclockwise();
     }
 
     @Nullable
@@ -150,8 +157,7 @@ public class ArtisanTable extends HorizontalFacingBlock {
         return switch (state.get(PART)){
             case LEFT ->
                     switch (state.get(FACING)){
-                        case DOWN -> null;
-                        case UP -> null;
+                        case DOWN, UP -> VoxelShapes.fullCube();
                         case NORTH -> Stream.of(
                                 Block.createCuboidShape(1, 0, 1, 4, 12, 15),
                                 Block.createCuboidShape(0, 12, 0, 16, 16, 16),
@@ -175,8 +181,7 @@ public class ArtisanTable extends HorizontalFacingBlock {
                     };
             case RIGHT ->
                     switch (state.get(FACING)) {
-                        case DOWN -> null;
-                        case UP -> null;
+                        case DOWN, UP -> VoxelShapes.fullCube();
                         case NORTH -> Stream.of(
                                 Block.createCuboidShape(12, 0, 1, 15, 12, 15),
                                 Block.createCuboidShape(0, 12, 0, 16, 16, 16),
